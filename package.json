@@ -1,0 +1,28 @@
+{
+  "name": "aws-genai-production-blueprint",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "eval:sample": "tsx src/eval/run-eval.ts eval/questions.example.jsonl",
+    "cdk:synth": "cdk synth",
+    "cdk:diff": "cdk diff",
+    "cdk:deploy": "cdk deploy"
+  },
+  "dependencies": {
+    "@aws-sdk/client-bedrock-runtime": "^3.940.0",
+    "aws-cdk-lib": "^2.230.0",
+    "constructs": "^10.4.3"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.159",
+    "@types/node": "^24.10.1",
+    "aws-cdk": "^2.1034.0",
+    "esbuild": "^0.27.2",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.14"
+  }
+}
