@@ -33,6 +33,8 @@ Suggested daily structure for 2 hours/day:
 
 ## Week 1 — AWS + GenAI foundation refresh
 
+Detailed guide: `docs/weeks/week-01-foundation-refresh.md`
+
 Goal: refresh the production AWS primitives and GenAI vocabulary needed for the rest of the roadmap.
 
 Study:
