@@ -13,7 +13,7 @@ Evaluation is a first-class part of the capstone because AIP-C01 expects product
 
 ## Dataset format
 
-Use JSONL files in `eval/`.
+Use JSONL files in `eval/`. For RAG cases, `expectedSources` is the key field that lets the eval runner check retrieval before judging answer wording.
 
 Each line should follow this shape:
 
@@ -42,7 +42,7 @@ Each line should follow this shape:
 
 ### RAG
 
-- Retrieval hit rate
+- Retrieval hit rate: expected source appears in retrieved top-k
 - Expected source coverage
 - Top-k relevance
 - Retrieval latency

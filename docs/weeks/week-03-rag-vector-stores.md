@@ -1,0 +1,330 @@
+# Week 3 — RAG and Vector Stores
+
+Goal: understand Retrieval-Augmented Generation (RAG) deeply enough to design, evaluate, and troubleshoot an AWS production-style `/ask` endpoint with citations.
+
+Study budget: 8-10 hours.
+
+Outcome by end of week:
+
+- You can explain the RAG data flow from source document to cited answer.
+- You can choose chunk size, overlap, embedding model, search strategy, and reranking approach based on failure modes.
+- You can compare Bedrock Knowledge Bases, OpenSearch vector search, Aurora PostgreSQL with pgvector, S3 document lakes, and DynamoDB metadata patterns.
+- The repo has a `/ask` API contract, document ingestion plan, phase-1 backend ADR, and retrieval evaluation questions with expected source documents.
+
+---
+
+## 1. Mental model: what RAG adds to a chat app
+
+A direct chat endpoint asks a foundation model to answer from model weights and prompt context. RAG adds an explicit retrieval step so the model answers from known source material.
+
+```text
+Question
+  -> validate request and identity
+  -> retrieve relevant chunks from authorized documents
+  -> optionally rerank retrieved chunks
+  -> build grounded prompt with chunk text + citation labels
+  -> generate answer with Bedrock Runtime
+  -> validate citation/source coverage
+  -> return answer + citations + retrieval diagnostics
+```
+
+Important architect mindset:
+
+- Retrieval is not just a search feature; it is a control plane for grounding, authorization, freshness, observability, and evaluation.
+- The model is only as good as the context it receives. Bad chunking, stale indexes, overly strict metadata filters, or weak embedding choices can make a strong model hallucinate.
+- A production RAG answer should include either citations or an explicit no-answer state.
+
+---
+
+## 2. RAG architecture layers
+
+| Layer | Responsibility | AWS examples |
+|---|---|---|
+| Source of truth | Durable original documents and metadata | S3 document lake |
+| Ingestion | parse, chunk, embed, index, sync | Bedrock Knowledge Bases ingestion jobs, custom Lambda/Step Functions later |
+| Vector/search index | semantic/hybrid retrieval over chunks | Bedrock Knowledge Bases vector store, OpenSearch, Aurora pgvector |
+| Metadata registry | document status, ownership, classification, lineage | DynamoDB |
+| Retrieval API | top-k search, metadata filters, search strategy, reranking | Bedrock Agent Runtime Retrieve/RetrieveAndGenerate, OpenSearch API |
+| Generation | grounded answer from retrieved context | Bedrock Runtime Converse |
+| Evaluation | source hit rate, citation correctness, faithfulness, latency | `eval/questions.example.jsonl`, future eval runner |
+
+Exam connection:
+
+- Domain 1: data management, embeddings, vector stores, FM grounding.
+- Domain 2: API/integration design.
+- Domain 3: document-level authorization and data privacy.
+- Domain 5: retrieval troubleshooting and validation.
+
+---
+
+## 3. Chunking and overlap
+
+Chunking turns source documents into retrieval units. The goal is to make each chunk small enough to retrieve precisely, but large enough to preserve meaning.
+
+Common strategies:
+
+| Strategy | Good for | Risk |
+|---|---|---|
+| Fixed-size chunks | simple baseline, predictable cost | can split concepts/tables awkwardly |
+| Semantic chunks | sections/paragraphs with natural boundaries | less deterministic, harder to tune |
+| Hierarchical chunks | long documents where parent section context matters | more complex eval and citation handling |
+| No chunking | short atomic docs | poor fit for long PDFs/runbooks |
+
+Phase-1 baseline for this repo:
+
+```text
+chunk size: ~800 tokens
+chunk overlap: ~120 tokens
+max retrieved chunks: 5 by default, 20 hard API limit
+```
+
+Why overlap exists:
+
+- It reduces boundary loss when a key definition starts in one chunk and finishes in the next.
+- It improves recall for questions that reference a concept spanning adjacent paragraphs.
+- Too much overlap increases duplicate context, cost, latency, and citation noise.
+
+Troubleshooting examples:
+
+| Symptom | Likely chunking issue | Fix |
+|---|---|---|
+| Retrieved chunk mentions topic but misses answer | chunk too small or boundary split | increase size or overlap; use section-aware chunking |
+| Many duplicate citations | overlap too high | reduce overlap or dedupe adjacent chunks |
+| Top chunks are broad and vague | chunk too large | reduce chunk size; improve headings/metadata |
+| Tables lose meaning | parser/chunker loses structure | use cleaner source format or table-aware preprocessing |
+
+---
+
+## 4. Embeddings
+
+Embeddings convert text into vectors so semantic similarity can be searched numerically.
+
+Architect questions:
+
+- Does the embedding model support the language and domain vocabulary?
+- What vector dimension does it produce, and does the vector store support it?
+- Does the embedding model match the retrieval strategy and expected corpus size?
+- Are query embeddings and document embeddings generated by the same compatible model?
+- What is the latency/cost of re-embedding when documents change?
+
+Phase-1 posture:
+
+- Use an AWS-native embedding model supported by Bedrock Knowledge Bases.
+- Keep the embedding model configurable in infrastructure, not hard-coded into application logic.
+- Re-evaluate embedding quality through source hit-rate and faithfulness tests, not intuition.
+
+Common failure mode:
+
+```text
+Documents are ingested with embedding model A, but queries use embedding model B.
+Result: retrieval scores become unreliable even if the source docs are correct.
+```
+
+---
+
+## 5. Hybrid search and reranking
+
+Semantic vector search is strong for meaning. Keyword/BM25 search is strong for exact terms, IDs, error codes, product names, and acronyms. Hybrid search combines both.
+
+Use semantic search when:
+
+- the user asks conceptual questions;
+- wording differs between query and source;
+- exact terms are not important.
+
+Use hybrid search when:
+
+- documents contain codes, IDs, function names, AWS service names, or exact policy terms;
+- vector search misses lexical matches;
+- compliance/legal text requires exact phrase recall.
+
+Reranking reorders initially retrieved candidates with a stronger relevance model. It is useful when top-k recall is good but ordering is weak.
+
+AWS-specific note from Bedrock API docs:
+
+- Knowledge Base vector search supports `numberOfResults`, metadata filters, and reranking configuration.
+- `HYBRID` search is available for Knowledge Bases when using an OpenSearch Serverless vector store with a filterable text field; other vector-store configurations are semantic-only.
+
+Phase-1 interface keeps both knobs:
+
+```json
+{
+  "retrieval": {
+    "maxResults": 5,
+    "searchStrategy": "semantic",
+    "rerank": false
+  }
+}
+```
+
+The interface can request `hybrid` and `rerank`; the backend implementation must downgrade or reject unsupported combinations explicitly.
+
+---
+
+## 6. Bedrock Knowledge Bases
+
+Bedrock Knowledge Bases is the phase-1 choice for this capstone.
+
+What it gives us:
+
+- Managed RAG workflow around data sources, chunking, embeddings, vector stores, retrieval, generation, citations, and sync jobs.
+- Native S3 document source pattern.
+- Ability to query retrieved sources directly or generate responses based on retrieved sources.
+- Metadata filtering and reranking support through Knowledge Base retrieval configuration.
+- Integration path into Bedrock Agents later.
+
+Why it fits Week 3:
+
+- It teaches the AWS-managed RAG path most likely to appear in scenario questions.
+- It avoids premature custom search infrastructure.
+- It lets us focus on architecture, source quality, citations, metadata filters, and evals first.
+
+What it does not remove:
+
+- You still need a clean document lake.
+- You still need metadata design.
+- You still need authorization filters.
+- You still need evaluation and troubleshooting.
+
+---
+
+## 7. OpenSearch vector search
+
+OpenSearch is better when the retrieval layer itself is the product or when you need deep search control.
+
+Prefer OpenSearch when:
+
+- you need custom hybrid search, analyzers, fields, scoring, or dashboards;
+- exact lexical matching is as important as semantic similarity;
+- you need high query throughput and operational control;
+- you want to tune HNSW/IVF/vector index behavior directly;
+- you need to inspect search relevance diagnostics beyond managed abstractions.
+
+Trade-off:
+
+- More control and tuning power.
+- More operational complexity: index schemas, capacity, shard/collection settings, relevance tuning, security policies, cost monitoring.
+
+Capstone rule:
+
+```text
+Start with Bedrock Knowledge Bases. Graduate to direct OpenSearch only after eval data proves we need custom retrieval behavior.
+```
+
+---
+
+## 8. Aurora PostgreSQL with pgvector
+
+Aurora pgvector is a strong choice when vectors are part of a relational application.
+
+Prefer Aurora pgvector when:
+
+- the app already uses PostgreSQL/Aurora for core data;
+- retrieval requires SQL joins, transactions, or relational filters;
+- you need ACID semantics around document metadata and vector records;
+- corpus size/query volume fits relational scaling characteristics.
+
+Avoid making Aurora the default when:
+
+- the data is mostly unstructured documents in S3;
+- you do not need relational joins;
+- you want the lowest-ops managed RAG path for a certification capstone.
+
+Exam trap:
+
+- pgvector is not “better” just because SQL is familiar. Choose it for relational + vector workloads, not generic document RAG.
+
+---
+
+## 9. S3 document lakes
+
+S3 is the source of truth for raw and canonical documents.
+
+Recommended prefixes:
+
+```text
+s3://<document-bucket>/raw/<tenantId>/<documentId>/<version>/source.ext
+s3://<document-bucket>/canonical/<tenantId>/<documentId>/<version>/source.md
+s3://<document-bucket>/metadata/<tenantId>/<documentId>/<version>/source.md.metadata.json
+s3://<document-bucket>/eval/<dataset>/expected-sources.json
+```
+
+Why S3 first:
+
+- durable, inexpensive source storage;
+- versioned objects;
+- good integration with Bedrock Knowledge Bases;
+- Macie can scan buckets for sensitive data;
+- KMS/bucket policies enforce baseline protection.
+
+Do not treat the vector store as the system of record. It is a derived index.
+
+---
+
+## 10. DynamoDB metadata patterns
+
+DynamoDB should track operational metadata that Bedrock/OpenSearch should not own.
+
+Example single-table access patterns:
+
+| Access pattern | Key shape |
+|---|---|
+| Get latest document metadata | `PK=TENANT#<tenantId>`, `SK=DOC#<documentId>#LATEST` |
+| Get a specific document version | `PK=DOC#<documentId>`, `SK=VERSION#<version>` |
+| List documents by ingestion status | `GSI1PK=STATUS#<status>`, `GSI1SK=updatedAt#<timestamp>` |
+| List documents by classification | `GSI2PK=CLASS#<classification>`, `GSI2SK=tenantId#documentId` |
+| Get ingestion job history | `PK=DOC#<documentId>`, `SK=INGESTION#<timestamp>` |
+
+Metadata to store:
+
+- tenant/document/version identifiers;
+- source S3 URI and ETag;
+- classification and allowed groups;
+- parser/chunker/embedding versions;
+- ingestion status and last sync job ID;
+- expected source document IDs for eval cases.
+
+Exam trap:
+
+- IAM protects AWS resources. It does not automatically enforce application-level document authorization inside a retrieved context. Authorization metadata must be part of retrieval filtering.
+
+---
+
+## 11. Week 3 build artifacts in this repo
+
+This week adds:
+
+- `/ask` interface and scaffold: `src/functions/ask/index.ts`, shared types in `src/shared/types.ts`, CDK route in `lib/genai-blueprint-stack.ts`.
+- API design: `docs/ask-api-design.md`.
+- Ingestion plan: `docs/rag-ingestion-plan.md`.
+- Backend decision: `docs/decisions/adr-001-rag-backend-phase-1.md`.
+- Retrieval eval cases: `eval/questions.example.jsonl`.
+
+`/ask` intentionally returns a structured `retrieval_backend_not_configured` no-answer response until a real Knowledge Base ID and retrieval implementation are added. This prevents the interface from pretending to answer without sources.
+
+---
+
+## 12. Readiness gate
+
+You are ready to move on when you can answer these without notes:
+
+1. Why does RAG reduce hallucination risk but not eliminate it?
+2. How can chunk size create retrieval misses?
+3. Why can too much overlap hurt cost and citation quality?
+4. When is hybrid search better than semantic-only search?
+5. What does reranking fix, and what does it not fix?
+6. Why is Bedrock Knowledge Bases the phase-1 choice here?
+7. What signals would justify moving to direct OpenSearch?
+8. When is Aurora pgvector the right fit?
+9. Why is S3 still the source of truth even after documents are embedded?
+10. Which metadata fields are required for document-level authorization?
+
+Verification commands:
+
+```bash
+npm run typecheck
+npm test
+npm run eval:sample
+npm run cdk:synth
+git diff --check
+```

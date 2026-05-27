@@ -54,13 +54,13 @@ Goal: implement a RAG endpoint with citations and retrieval diagnostics.
 
 | ID | Task | Acceptance criteria | Status |
 |---|---|---|---|
-| E2.1 | Choose RAG backend | Decision recorded: Bedrock Knowledge Bases vs OpenSearch vs Aurora pgvector | Todo |
-| E2.2 | Add document source bucket | CDK provisions encrypted S3 bucket for source docs | Todo |
-| E2.3 | Add ingestion plan | Document chunking, metadata, and sync process documented | Todo |
-| E2.4 | Add `/ask` API contract | Request/response types include question, citations, and retrieval metadata | Todo |
-| E2.5 | Add retrieval metrics | Track retrieval latency, chunk count, and relevance score | Todo |
-| E2.6 | Add citation requirement | Responses include source references or explicit no-answer state | Todo |
-| E2.7 | Add retrieval eval dataset | JSONL contains questions with expected source docs | Todo |
+| E2.1 | Choose RAG backend | Decision recorded: Bedrock Knowledge Bases vs OpenSearch vs Aurora pgvector | Done |
+| E2.2 | Add document source bucket | CDK provisions encrypted S3 bucket for source docs | Scaffolded |
+| E2.3 | Add ingestion plan | Document chunking, metadata, and sync process documented | Done |
+| E2.4 | Add `/ask` API contract | Request/response types include question, citations, and retrieval metadata | Scaffolded |
+| E2.5 | Add retrieval metrics | Track retrieval latency, chunk count, and relevance score | Scaffolded |
+| E2.6 | Add citation requirement | Responses include source references or explicit no-answer state | Scaffolded |
+| E2.7 | Add retrieval eval dataset | JSONL contains questions with expected source docs | Done |
 
 Exam scenarios covered:
 
@@ -197,20 +197,23 @@ Goal: convert implementation knowledge into exam performance.
 
 ## Recommended next sprint
 
-Sprint 1 should convert the scaffold into a validated AWS deployment:
+Sprint 2 should turn the Week 3 RAG contract into a real managed retrieval path after the sandbox `/chat` deployment is validated:
 
-1. Deploy the CDK stack to a sandbox account.
-2. Call `/health` through API Gateway.
-3. Enable Bedrock model access in the deployment region.
-4. Call `/chat` with a small prompt.
-5. Review CloudWatch logs for request ID, model ID, latency, and safe logging behavior.
-6. Tighten IAM/resource policies based on the deployed model/region.
+1. Provision a Bedrock Knowledge Base with the CDK document bucket as the S3 data source.
+2. Choose and document the embedding model/profile.
+3. Add sample canonical Markdown documents plus `.metadata.json` sidecars.
+4. Start and observe a Knowledge Base ingestion/sync job.
+5. Wire `/ask` to call Knowledge Base `Retrieve`, map chunks into citations, then generate grounded answers through Bedrock Runtime.
+6. Run retrieval eval cases and inspect expected source coverage.
+7. Review CloudWatch logs for request ID, backend, search strategy, returned chunk count, retrieval latency, generation latency, and no raw prompt logging.
 
 Definition of done:
 
 - `npm run typecheck` passes.
 - `npm test` passes.
+- `npm run eval:sample` passes.
 - `npm run cdk:synth` passes.
-- `/health` works in AWS.
-- `/chat` returns a Bedrock response in AWS.
-- README documents how to call `/chat` after deployment.
+- Bedrock Knowledge Base sync succeeds against a sandbox document set.
+- `/ask` returns citations for answerable questions.
+- `/ask` returns an explicit no-answer state for unsupported questions.
+- README documents how to call `/ask` after deployment.

@@ -85,6 +85,8 @@ Readiness gate:
 
 ## Week 3 — RAG and vector stores
 
+Detailed guide: `docs/weeks/week-03-rag-vector-stores.md`
+
 Goal: understand and implement retrieval-augmented generation patterns.
 
 Study:

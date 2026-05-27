@@ -63,6 +63,9 @@ High-level phases:
 └── docs/
     ├── aip-c01-roadmap.md       # 12-week study roadmap
     ├── weeks/                   # Week-by-week study + build guides
+    ├── decisions/               # Architecture decision records
+    ├── ask-api-design.md        # RAG `/ask` contract
+    ├── rag-ingestion-plan.md    # S3/metadata/chunking ingestion plan
     ├── backlog.md               # Implementation backlog mapped to exam domains
     ├── capstone-architecture.md # Target production architecture
     ├── exam-checklists.md       # Domain-by-domain readiness checklists
@@ -102,7 +105,7 @@ The target application is an enterprise-style AI assistant API:
 
 - `/health`: operational health endpoint
 - `/chat`: direct Bedrock chat endpoint
-- `/ask`: future RAG endpoint with citations
+- `/ask`: RAG endpoint contract with citations and explicit no-answer states; backend wiring is a future Week 3 follow-up
 - `/agent`: future agentic workflow endpoint with tool boundaries
 - `/eval`: optional internal evaluation runner/reporting endpoint
 
@@ -144,5 +147,7 @@ This initial scaffold contains:
 - configurable inference parameters and token/latency metadata helpers
 - evaluation runner skeleton
 - 12-week roadmap and implementation backlog
+- Week 3 RAG study guide, `/ask` API contract, ingestion plan, and backend ADR
+- `/ask` Lambda/API Gateway scaffold that returns an explicit no-answer state until Bedrock Knowledge Bases is configured
 
-Next recommended implementation step: complete Epic 1 in `docs/backlog.md` by deploying the direct Bedrock chat API in a sandbox account.
+Next recommended implementation step: provision the phase-1 Bedrock Knowledge Base, connect it to the S3 document bucket, and wire `/ask` to retrieve sources before generating grounded answers.

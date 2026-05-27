@@ -18,12 +18,13 @@ Use this as a fast exam and architecture reference.
 
 | Requirement | Prefer | Why |
 |---|---|---|
+| Phase-1 capstone RAG | Bedrock Knowledge Bases | Managed ingestion/retrieval/citations with low ops |
 | Managed RAG with lower ops | Bedrock Knowledge Bases | Handles ingestion/retrieval integration |
 | Custom vector/hybrid search | OpenSearch Service / Serverless | Index tuning, hybrid queries, custom scoring |
 | Relational metadata + vectors | Aurora PostgreSQL + pgvector | SQL + vector retrieval in one place |
 | Document source of truth | S3 | Durable object store and integration point |
+| Document/ingestion metadata registry | DynamoDB | Serverless metadata lookups, status tracking, auth-filter inputs |
 | Enterprise search connectors | Amazon Kendra or Amazon Q Business | Enterprise document search patterns |
-| Metadata/session storage | DynamoDB | Serverless key-value/document access |
 
 ## Orchestration and integration
 

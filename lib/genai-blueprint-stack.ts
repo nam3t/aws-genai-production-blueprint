@@ -52,6 +52,11 @@ export class GenAiBlueprintStack extends cdk.Stack {
       removalPolicy: RemovalPolicy.DESTROY,
     });
 
+    const askLogGroup = new logs.LogGroup(this, 'AskFunctionLogGroup', {
+      retention: logs.RetentionDays.ONE_WEEK,
+      removalPolicy: RemovalPolicy.DESTROY,
+    });
+
     const healthFn = new lambdaNodejs.NodejsFunction(this, 'HealthFunction', {
       ...commonLambdaProps,
       entry: 'src/functions/health/index.ts',
@@ -87,6 +92,20 @@ export class GenAiBlueprintStack extends cdk.Stack {
       },
     });
 
+    const askFn = new lambdaNodejs.NodejsFunction(this, 'AskFunction', {
+      ...commonLambdaProps,
+      entry: 'src/functions/ask/index.ts',
+      handler: 'handler',
+      description: 'RAG ask endpoint contract with citation/no-answer response shape',
+      logGroup: askLogGroup,
+      environment: {
+        RAG_BACKEND_PHASE: 'bedrock-knowledge-bases',
+        BEDROCK_KNOWLEDGE_BASE_ID: process.env.BEDROCK_KNOWLEDGE_BASE_ID ?? '',
+        DOCUMENT_BUCKET_NAME: documentBucket.bucketName,
+        LOG_RAW_PROMPTS: process.env.LOG_RAW_PROMPTS ?? 'false',
+      },
+    });
+
     sessionsTable.grantReadWriteData(chatFn);
 
     chatFn.addToRolePolicy(
@@ -115,6 +134,7 @@ export class GenAiBlueprintStack extends cdk.Stack {
 
     api.root.addResource('health').addMethod('GET', new apigateway.LambdaIntegration(healthFn));
     api.root.addResource('chat').addMethod('POST', new apigateway.LambdaIntegration(chatFn));
+    api.root.addResource('ask').addMethod('POST', new apigateway.LambdaIntegration(askFn));
 
     new cdk.CfnOutput(this, 'ApiUrl', {
       value: api.url,

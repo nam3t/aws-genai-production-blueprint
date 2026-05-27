@@ -68,9 +68,9 @@ API Gateway
 ### Retrieval/data layer
 
 - S3 for document source of truth
-- Bedrock Knowledge Bases for managed RAG in early phases
-- OpenSearch for custom vector/hybrid search if needed
-- DynamoDB for sessions, metadata, and request records
+- Bedrock Knowledge Bases for phase-1 managed RAG
+- OpenSearch for custom vector/hybrid search if evaluation proves the managed path is insufficient
+- DynamoDB for sessions, document metadata, ingestion status, and request records
 - Aurora pgvector only if relational + vector search becomes a requirement
 
 ### Security/governance
@@ -108,12 +108,12 @@ Exam domains:
 ## Data flow: RAG answer
 
 1. Client calls `POST /ask` with a question and optional filters.
-2. Handler validates user identity and document access scope.
-3. Retriever queries the vector index or Knowledge Base.
-4. Handler assembles context with citations.
-5. Bedrock generates a grounded answer.
+2. Handler validates the request shape and resolves user identity/access scope.
+3. Retriever queries Bedrock Knowledge Bases in phase 1 using metadata filters.
+4. Handler maps retrieved chunks into citation candidates.
+5. Bedrock Runtime generates a grounded answer from labeled source chunks.
 6. Citation validator checks source coverage.
-7. Response includes answer, citations, retrieval metadata, and confidence signals.
+7. Response includes answer, citations, retrieval metadata, and confidence/no-answer signals.
 
 Exam domains:
 
@@ -164,13 +164,16 @@ Exam domains:
 - Stored data must be encrypted.
 - Safety controls must exist both before and after model invocation.
 
+## Current RAG backend decision
+
+Phase 1 uses Bedrock Knowledge Bases with S3 as the document source of truth. Direct OpenSearch is reserved for a later phase if retrieval evaluation proves a need for custom hybrid search, analyzers, scoring, dashboards, or higher-control index operations. See `docs/decisions/adr-001-rag-backend-phase-1.md`.
+
 ## Architecture decision record candidates
 
 Create ADRs later for:
 
-1. Bedrock Knowledge Bases vs OpenSearch for RAG
-2. Lambda vs ECS/Fargate for tool servers
-3. Bedrock Agents vs custom Step Functions agent workflow
-4. Exact cache vs semantic cache
-5. How to store prompts and prompt versions
-6. Whether to store prompt/response content or only metadata
+1. Lambda vs ECS/Fargate for tool servers
+2. Bedrock Agents vs custom Step Functions agent workflow
+3. Exact cache vs semantic cache
+4. How to store prompts and prompt versions
+5. Whether to store prompt/response content or only metadata
