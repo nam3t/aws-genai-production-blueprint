@@ -32,10 +32,10 @@ Goal: expose a minimal production-style API that calls Amazon Bedrock.
 | ID | Task | Acceptance criteria | Status |
 |---|---|---|---|
 | E1.1 | Add health Lambda | `/health` returns status and timestamp | Scaffolded |
-| E1.2 | Add chat Lambda | `/chat` accepts `{ message, sessionId? }` and returns model text | Scaffolded |
-| E1.3 | Add Bedrock Runtime client | Handler uses Bedrock Converse API | Scaffolded |
-| E1.4 | Add model config | Model ID is configurable via environment variable | Scaffolded |
-| E1.5 | Add structured logs | Logs include request ID, model ID, latency, and error category | Scaffolded |
+| E1.2 | Add chat Lambda | `/chat` accepts `{ message, sessionId?, complexity? }` and returns model text plus metadata | Scaffolded |
+| E1.3 | Add Bedrock Runtime client | Handler uses Bedrock Converse API with configurable inference parameters | Scaffolded |
+| E1.4 | Add model config | Standard/simple/complex/fallback model IDs are configurable via environment variables | Scaffolded |
+| E1.5 | Add structured logs | Logs include request ID, model ID, fallback candidates, latency, token fields when returned, and error category | Scaffolded |
 | E1.6 | Add basic model router | Simple/standard/complex request categories map to model IDs | Done |
 | E1.7 | Add unit tests for router | Tests cover fallback/default behavior | Done |
 

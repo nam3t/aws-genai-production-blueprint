@@ -62,6 +62,7 @@ High-level phases:
 ├── eval/                        # Example eval datasets
 └── docs/
     ├── aip-c01-roadmap.md       # 12-week study roadmap
+    ├── weeks/                   # Week-by-week study + build guides
     ├── backlog.md               # Implementation backlog mapped to exam domains
     ├── capstone-architecture.md # Target production architecture
     ├── exam-checklists.md       # Domain-by-domain readiness checklists
@@ -138,8 +139,9 @@ This initial scaffold contains:
 
 - CDK app skeleton
 - API Gateway + Lambda starter stack
-- Bedrock chat handler skeleton
-- model router utility
+- Bedrock chat handler using the Converse API
+- configurable model router with fallback candidates
+- configurable inference parameters and token/latency metadata helpers
 - evaluation runner skeleton
 - 12-week roadmap and implementation backlog
 

@@ -68,6 +68,20 @@ export class GenAiBlueprintStack extends cdk.Stack {
       logGroup: chatLogGroup,
       environment: {
         BEDROCK_MODEL_ID: process.env.BEDROCK_MODEL_ID ?? 'anthropic.claude-3-5-sonnet-20240620-v1:0',
+        BEDROCK_SIMPLE_MODEL_ID:
+          process.env.BEDROCK_SIMPLE_MODEL_ID ??
+          process.env.BEDROCK_MODEL_ID ??
+          'anthropic.claude-3-5-sonnet-20240620-v1:0',
+        BEDROCK_COMPLEX_MODEL_ID:
+          process.env.BEDROCK_COMPLEX_MODEL_ID ??
+          process.env.BEDROCK_MODEL_ID ??
+          'anthropic.claude-3-5-sonnet-20240620-v1:0',
+        BEDROCK_FALLBACK_MODEL_IDS: process.env.BEDROCK_FALLBACK_MODEL_IDS ?? '',
+        BEDROCK_MAX_TOKENS: process.env.BEDROCK_MAX_TOKENS ?? '800',
+        BEDROCK_TEMPERATURE: process.env.BEDROCK_TEMPERATURE ?? '0.2',
+        BEDROCK_TOP_P: process.env.BEDROCK_TOP_P ?? '0.9',
+        BEDROCK_TOP_K: process.env.BEDROCK_TOP_K ?? '',
+        BEDROCK_STOP_SEQUENCES: process.env.BEDROCK_STOP_SEQUENCES ?? '',
         SESSIONS_TABLE_NAME: sessionsTable.tableName,
         LOG_RAW_PROMPTS: process.env.LOG_RAW_PROMPTS ?? 'false',
       },

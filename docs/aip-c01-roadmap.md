@@ -58,6 +58,8 @@ Readiness gate:
 
 ## Week 2 — Bedrock and model integration
 
+Detailed guide: `docs/weeks/week-02-bedrock-model-integration.md`
+
 Goal: directly integrate a foundation model through Amazon Bedrock.
 
 Study:

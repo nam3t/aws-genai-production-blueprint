@@ -7,3 +7,5 @@ cdk.out/
 .env.local
 .DS_Store
 *.log
+aws/
+awscliv2.zip

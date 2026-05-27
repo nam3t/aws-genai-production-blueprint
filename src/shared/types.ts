@@ -11,6 +11,11 @@ export interface ChatResponse {
     modelId: string;
     latencyMs: number;
     promptVersion: string;
+    modelSelectionReason: string;
+    fallbackModelIds: string[];
+    inputTokens?: number;
+    outputTokens?: number;
+    totalTokens?: number;
   };
 }
 
